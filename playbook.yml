@@ -1,0 +1,77 @@
+---
+- name: HW-26
+  hosts: DynamicWeb
+  become: yes
+  gather_facts: false
+  
+  tasks:
+    - name: Install pre-docker
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - mc
+        state: latest
+        update_cache: true
+      tags:
+        - docker
+
+    - name: Add Docker s official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      tags:
+        - docker
+
+    - name: Verify that we have the key with the fingerprint
+      apt_key:
+        id: 0EBFCD88
+        state: present
+      tags:
+        - docker
+
+    - name: Set up the stable repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+        state: present
+        update_cache: yes
+      tags:
+        - docker
+
+    - name: Update packages
+      apt:
+        update_cache: true
+        upgrade: 'yes'
+      tags:
+        - docker
+      
+    - name: Install docker
+      apt:
+        name:
+          - docker-ce
+          - docker-compose 
+        state: latest
+        update_cache: true
+      tags:
+        - docker
+
+    - name: Add remote "vagrant" user to "docker" group
+      shell: 
+        cmd: "usermod -a -G docker vagrant"
+      tags:
+        - docker
+
+    - name: Copy project
+      copy: 
+        src: project
+        dest: /home/vagrant
+
+    - name: reset ssh connection
+      meta: reset_connection
+
+    - name: Run container
+      shell:
+        cmd: "docker-compose -f docker-compose.yml up --build -d"
+        chdir: /home/vagrant/project
